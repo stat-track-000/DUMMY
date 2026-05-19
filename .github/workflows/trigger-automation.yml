@@ -1,0 +1,64 @@
+name: Trigger Automation Suite
+
+on:
+  push:
+    branches:
+      - MKQA
+
+jobs:
+  check-and-trigger:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check commit message for 'release'
+        id: check_commit
+        run: |
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MESSAGE"
+          
+          if [[ "$COMMIT_MESSAGE" =~ [Rr][Ee][Ll][Ee][Aa][Ss][Ee] ]]; then
+            echo "release_found=true" >> $GITHUB_OUTPUT
+            echo "✅ 'release' keyword found in commit message"
+          else
+            echo "release_found=false" >> $GITHUB_OUTPUT
+            echo "❌ 'release' keyword NOT found in commit message"
+          fi
+      
+      - name: Log commit information
+        if: steps.check_commit.outputs.release_found == 'true'
+        run: |
+          echo "========================================"
+          echo "Triggering Automation Suite"
+          echo "========================================"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "========================================"
+      
+      - name: Trigger Automation Suite
+        if: steps.check_commit.outputs.release_found == 'true'
+        run: |
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.AUTOMATION_TRIGGER_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -d '{
+              "event_type": "automation-trigger",
+              "client_payload": {
+                "trigger_source": "dev-repo",
+                "branch": "${{ github.ref }}",
+                "commit_sha": "${{ github.sha }}",
+                "commit_message": "'"$(git log -1 --pretty=%B)"'",
+                "triggered_by": "${{ github.actor }}"
+              }
+            }' \
+            https://api.github.com/repos/Akbar-MK/automation-repo/dispatches
+      
+      - name: Automation Trigger Successful
+        if: steps.check_commit.outputs.release_found == 'true'
+        run: |
+          echo "🚀 Automation suite has been triggered successfully!"
