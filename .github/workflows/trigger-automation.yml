@@ -56,7 +56,7 @@ jobs:
                 "triggered_by": "${{ github.actor }}"
               }
             }' \
-            https://api.github.com/repos/Akbar-MK/automation-repo/dispatches
+            https://api.github.com/repos/MillerKnoll-Digital/sfb2b-automation/dispatches
       
       - name: Automation Trigger Successful
         if: steps.check_commit.outputs.release_found == 'true'
