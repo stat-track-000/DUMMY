@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       
       - name: Check commit message for 'release'
         id: check_commit
@@ -50,21 +52,34 @@ jobs:
           $commitMessage = git log -1 --pretty=%B
           
           $body = @{
-            "event_type" = "automation-trigger"
-            "client_payload" = @{
-              "trigger_source" = "dev-repo"
-              "branch" = "${{ github.ref }}"
-              "commit_sha" = "${{ github.sha }}"
-              "commit_message" = "$commitMessage"
-              "triggered_by" = "${{ github.actor }}"
+            event_type = "automation-trigger"
+            client_payload = @{
+              trigger_source = "dev-repo"
+              branch = "${{ github.ref }}"
+              commit_sha = "${{ github.sha }}"
+              commit_message = $commitMessage
+              triggered_by = "${{ github.actor }}"
             }
-          } | ConvertTo-Json
+          } | ConvertTo-Json -Depth 10
           
-          Invoke-WebRequest -Uri "https://api.github.com/repos/MillerKnoll-Digital/sfb2b-automation/dispatches" `
-            -Headers $headers `
-            -Method POST `
-            -ContentType "application/json" `
-            -Body $body
+          Write-Output "Request Body: $body"
+          
+          try {
+            $response = Invoke-WebRequest `
+              -Uri "https://api.github.com/repos/MillerKnoll-Digital/sfb2b-automation/dispatches" `
+              -Headers $headers `
+              -Method POST `
+              -ContentType "application/json" `
+              -Body $body `
+              -ErrorAction Stop
+            
+            Write-Output "Response Status: $($response.StatusCode)"
+            Write-Output "✅ Trigger sent successfully!"
+          } catch {
+            Write-Output "❌ Error sending trigger:"
+            Write-Output $_.Exception.Message
+            exit 1
+          }
       
       - name: Automation Trigger Successful
         if: steps.check_commit.outputs.release_found == 'true'
