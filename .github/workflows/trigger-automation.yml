@@ -49,7 +49,7 @@ jobs:
           $pat = "${{ secrets.AUTOMATION_TRIGGER_TOKEN }}"
           $headers = @{"Authorization" = "token $pat"}
           
-          $commitMessage = git log -1 --pretty=%B
+          $commitMessage = (git log -1 --pretty=%B) -join "`n"
           
           $body = @{
             event_type = "automation-trigger"
