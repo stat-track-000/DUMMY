@@ -71,13 +71,19 @@ jobs:
               -Method POST `
               -ContentType "application/json" `
               -Body $body `
+              -UseBasicParsing `
               -ErrorAction Stop
-            
+
             Write-Output "Response Status: $($response.StatusCode)"
-            Write-Output "✅ Trigger sent successfully!"
+            Write-Output "Trigger sent successfully!"
           } catch {
-            Write-Output "❌ Error sending trigger:"
+            Write-Output "Error sending trigger!:"
             Write-Output $_.Exception.Message
+            if ($_.Exception.Response) {
+              $stream = $_.Exception.Response.GetResponseStream()
+              $reader = New-Object System.IO.StreamReader($stream)
+              Write-Output $reader.ReadToEnd()
+            }
             exit 1
           }
       
